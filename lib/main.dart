@@ -281,7 +281,7 @@ class _MainAppState extends State<MainApp> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Welcome, ${widget.username}'),
+            Text('Welcome ${widget.username}👋'),
             Text(
               'Boat: ${widget.boatNumber}',
               style: const TextStyle(fontSize: 12),
@@ -295,7 +295,7 @@ class _MainAppState extends State<MainApp> {
           children: [
             DrawerHeader(
               decoration: BoxDecoration(
-                color: Colors.blue.shade200,
+                color: const Color.fromARGB(255, 233, 89, 6),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,10 +310,11 @@ class _MainAppState extends State<MainApp> {
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
+                      color: Colors.deepPurpleAccent,
                     ),
                   ),
                   Text(
-                    'Boat: ${widget.boatNumber}',
+                    'Boat No.: ${widget.boatNumber}',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey.shade700,
@@ -422,11 +423,11 @@ class HomePage extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Welcome back, $username',
+            'Welcome back $username',
             style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
           ),
           Text(
-            'Boat Number: $boatNumber',
+            'Boat No.: $boatNumber',
             style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
           ),
           const SizedBox(height: 20),
