@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';  
+import 'package:intl/intl.dart'; 
+import 'bacground.dart'; 
 
 void main() {
   runApp(const FishApp());
@@ -16,7 +17,7 @@ class FishApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: const AuthWrapper(),
+      home:const AuthWrapper(), 
       debugShowCheckedModeBanner: false,
     );
   }
@@ -24,7 +25,7 @@ class FishApp extends StatelessWidget {
 
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
-
+   
   @override
   State<AuthWrapper> createState() => _AuthWrapperState();
 }
@@ -40,6 +41,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
       _username = username;
       _boatNumber = boatNumber;
     });
+   BlurredBackgroundApp();
   }
 
   void _logout() {
@@ -134,7 +136,7 @@ class _AuthPageState extends State<AuthPage> {
                   TextFormField(
                     controller: _usernameController,
                     decoration: const InputDecoration(
-                      labelText: 'Full Name',
+                      labelText: 'username',
                       prefixIcon: Icon(Icons.person),
                     ),
                     validator: (value) {
@@ -262,6 +264,7 @@ class _MainAppState extends State<MainApp> {
       ),
       FishCatchList(catches: _catches),
     ]);
+    BlurredBackgroundApp();
   }
 
   @override
