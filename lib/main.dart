@@ -102,7 +102,7 @@ class _AuthPageState extends State<AuthPage> {
     if (_isLogin) {
       // Login logic
       widget.onLogin(
-          _emailController.text.split('@').first, _boatNumberController.text);
+          _usernameController.text, _boatNumberController.text);
     } else {
       // Signup logic
       widget.onLogin(_usernameController.text, _boatNumberController.text);
@@ -122,7 +122,14 @@ class _AuthPageState extends State<AuthPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isLogin ? 'Fisherman Login' : 'Fisherman Registration'),
+        title: Center( child: Text(_isLogin ? 'Welcome Back again' : 'Sing Up ',
+        style: TextStyle(
+          color: const Color.fromARGB(255, 10, 135, 236),
+          fontSize: 34,
+          fontWeight: FontWeight.w200,
+        ), 
+        ),
+        ),
       ),
       body: Center(
         child: SingleChildScrollView(
