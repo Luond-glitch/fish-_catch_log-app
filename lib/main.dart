@@ -14,7 +14,7 @@ class FishApp extends StatelessWidget {
     return MaterialApp(
       title: 'Catchlog App',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.deepOrange,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       home: const AuthWrapper(),
@@ -466,10 +466,10 @@ class HomePage extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.anchor, size: 100, color: Colors.blue),
+          const Icon(Icons.anchor, size: 100, color: Colors.deepOrangeAccent),
           const SizedBox(height: 20),
           const Text(
-            'Fisherman Data App',
+            'SamakiLog Data App',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
@@ -478,7 +478,7 @@ class HomePage extends StatelessWidget {
             style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
           ),
           Text(
-            'Boat No.: $boatNumber',
+            'Boat No. $boatNumber',
             style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
           ),
           const SizedBox(height: 20),
