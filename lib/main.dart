@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'bacground.dart';
 
 void main() {
   runApp(const FishApp());
@@ -41,7 +40,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
       _username = username;
       _boatNumber = boatNumber;
     });
-    BlurredBackgroundApp();
   }
 
   void _logout() {
@@ -75,14 +73,13 @@ class AuthPage extends StatefulWidget {
 
 class _AuthPageState extends State<AuthPage> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
   final _usernameController = TextEditingController();
   final _boatNumberController = TextEditingController();
+  final _phoneNumberController = TextEditingController();
 
   bool _isLogin = true;
   bool _isLoading = false;
-  bool _obscureText = true;
+  bool _obscureBoatNumber = true;
 
   void _submit() async {
     if (!_formKey.currentState!.validate()) {
@@ -100,21 +97,14 @@ class _AuthPageState extends State<AuthPage> {
       _isLoading = false;
     });
 
-    if (_isLogin) {
-      // Login logic
-      widget.onLogin(_usernameController.text, _boatNumberController.text);
-    } else {
-      // Signup logic
-      widget.onLogin(_usernameController.text, _boatNumberController.text);
-    }
+    widget.onLogin(_usernameController.text, _boatNumberController.text);
   }
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
     _usernameController.dispose();
     _boatNumberController.dispose();
+    _phoneNumberController.dispose();
     super.dispose();
   }
 
@@ -130,172 +120,152 @@ class _AuthPageState extends State<AuthPage> {
           ),
         ),
         child: Center(
-                child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Card(
-                        elevation: 8,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Card(
+              elevation: 8,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.anchor, size: 60, color: Colors.blue),
+                      const SizedBox(height: 16),
+                      Text(
+                        _isLogin ? 'Welcome Back' : 'Create Account',
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
                         ),
-                        child: Padding(
-                            padding: const EdgeInsets.all(24.0),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.anchor, size: 60, color: Colors.blue),
-                        const SizedBox(height: 16),
-                        Text(
-                          _isLogin ? 'Welcome Back' : 'Create Account',
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue,
+                      ),
+                      const SizedBox(height: 24),
+                      TextFormField(
+                        controller: _usernameController,
+                        decoration: InputDecoration(
+                          labelText: 'Username',
+                          prefixIcon: const Icon(Icons.person),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
                         ),
-                        const SizedBox(height: 24),
-                        if (!_isLogin)
-                          TextFormField(
-                            controller: _usernameController,
-                            decoration: InputDecoration(
-                              labelText: 'Username',
-                              prefixIcon: const Icon(Icons.person),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              filled: true,
-                              fillColor: Colors.grey.shade50,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a username';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _boatNumberController,
+                        obscureText: _obscureBoatNumber,
+                        decoration: InputDecoration(
+                          labelText: 'Boat Number',
+                          prefixIcon: const Icon(Icons.directions_boat),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureBoatNumber
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: Colors.grey,
                             ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your details correct';
-                              }
-                              return null;
+                            onPressed: () {
+                              setState(() {
+                                _obscureBoatNumber = !_obscureBoatNumber;
+                              });
                             },
                           ),
-                        if (!_isLogin) const SizedBox(height: 16),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your boat number';
+                          }
+                          return null;
+                        },
+                      ),
+                      if (!_isLogin) const SizedBox(height: 16),
+                      if (!_isLogin)
                         TextFormField(
-                          controller: _boatNumberController,
+                          controller: _phoneNumberController,
                           decoration: InputDecoration(
-                            labelText: 'Boat Number',
-                            prefixIcon: const Icon(Icons.directions_boat),
+                            labelText: 'Phone Number',
+                            prefixIcon: const Icon(Icons.phone),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
                             filled: true,
                             fillColor: Colors.grey.shade50,
                           ),
+                          keyboardType: TextInputType.phone,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Please enter your detail correct';
+                              return 'Please enter your phone number';
                             }
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _emailController,
-                          decoration: InputDecoration(
-                            labelText: 'Email',
-                            prefixIcon: const Icon(Icons.email),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey.shade50,
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your detail correct';
-                            }
-                            if (!value.contains('@')) {
-                              return 'Please enter a valid email';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          obscureText: _obscureText,
-                          controller: _passwordController,
-                          decoration: InputDecoration(
-                            labelText: 'Password',
-                            prefixIcon: const Icon(Icons.lock),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscureText
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
-                                color: Colors.grey,
+                      const SizedBox(height: 24),
+                      if (_isLoading)
+                        const CircularProgressIndicator()
+                      else
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscureText = !_obscureText;
-                                });
-                              },
+                              backgroundColor: Colors.deepOrange,
                             ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey.shade50,
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter correct detail';
-                            }
-                            if (value.length < 4) {
-                              return 'Password must be at least 4 characters';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 24),
-                        if (_isLoading)
-                          const CircularProgressIndicator()
-                        else
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              onPressed: _submit,
-                              child: Text(
-                                _isLogin ? 'LOGIN' : 'REGISTER',
-                                style: const TextStyle(fontSize: 16),
+                            onPressed: _submit,
+                            child: Text(
+                              _isLogin ? 'LOGIN' : 'REGISTER',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.white
                               ),
                             ),
                           ),
-                        const SizedBox(height: 16),
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              _isLogin = !_isLogin;
-                            });
-                          },
-                          child: Text(
-                            _isLogin
-                                ? 'Create new account'
-                                : 'Already have an account? Login',
-                            style: TextStyle(color: Colors.blue.shade700),
+                        ),
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _isLogin = !_isLogin;
+                          });
+                        },
+                        child: Text(
+                          _isLogin
+                              ? 'Create new account'
+                              : 'Already have an account? Login',
+                          style: TextStyle(
+                            color: Colors.blue.shade700,
+                            fontWeight: FontWeight.bold
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
           ),
         ),
-      
+      ),
     );
   }
 }
@@ -319,7 +289,6 @@ class MainApp extends StatefulWidget {
 class _MainAppState extends State<MainApp> {
   int _currentIndex = 0;
   final List<FishCatch> _catches = [];
-
   final List<Widget> _pages = [];
 
   @override
@@ -338,7 +307,6 @@ class _MainAppState extends State<MainApp> {
       ),
       FishCatchList(catches: _catches),
     ]);
-    BlurredBackgroundApp();
   }
 
   @override
@@ -377,12 +345,12 @@ class _MainAppState extends State<MainApp> {
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.deepPurpleAccent,
+                      color: Colors.white,
                     ),
                   ),
                   Text(
                     'Boat No.: ${widget.boatNumber}',
-                    style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                    style: const TextStyle(fontSize: 14, color: Colors.white70),
                   ),
                 ],
               ),
@@ -462,42 +430,73 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.anchor, size: 100, color: Colors.deepOrangeAccent),
-          const SizedBox(height: 20),
-          const Text(
-            'SamakiLog Data App',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+    return Container(
+      decoration: const BoxDecoration(
+        image: DecorationImage(
+          image: NetworkImage(
+            'https://images.pexels.com/photos/2860705/pexels-photo-2860705.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260',
           ),
-          const SizedBox(height: 10),
-          Text(
-            'Welcome back $username',
-            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+          fit: BoxFit.cover,
+        ),
+      ),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.6),
+            borderRadius: BorderRadius.circular(20),
           ),
-          Text(
-            'Boat No. $boatNumber',
-            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => FishDataPage(
-                    catches: const [],
-                    boatNumber: boatNumber,
-                    onAddCatch: (_) {},
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.anchor, size: 100, color: Colors.white),
+              const SizedBox(height: 20),
+              const Text(
+                'SamakiLog Data App',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Welcome back $username',
+                style: const TextStyle(fontSize: 16, color: Colors.white),
+              ),
+              Text(
+                'Boat No. $boatNumber',
+                style: const TextStyle(fontSize: 16, color: Colors.white),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepOrange,
+                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
                   ),
                 ),
-              );
-            },
-            child: const Text('Record New Catch'),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FishDataPage(
+                        catches: const [],
+                        boatNumber: boatNumber,
+                        onAddCatch: (_) {},
+                      ),
+                    ),
+                  );
+                },
+                child: const Text(
+                  'Record New Catch',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -607,9 +606,18 @@ class _FishDataPageState extends State<FishDataPage> {
             const SizedBox(height: 20),
             TextFormField(
               controller: _speciesController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Fish Species',
-                prefixIcon: Icon(Icons.pets),
+                prefixIcon: const Icon(Icons.pets, color: Colors.deepOrange),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: Colors.deepOrange),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                filled: true,
+                fillColor: Colors.orange.shade50,
               ),
               validator: (value) {
                 if (value == null || value.isEmpty) {
@@ -621,9 +629,18 @@ class _FishDataPageState extends State<FishDataPage> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _weightController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Weight (kg)',
-                prefixIcon: Icon(Icons.scale),
+                prefixIcon: const Icon(Icons.scale, color: Colors.deepOrange),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: Colors.deepOrange),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                filled: true,
+                fillColor: Colors.orange.shade50,
               ),
               keyboardType: TextInputType.number,
               validator: (value) {
@@ -639,9 +656,18 @@ class _FishDataPageState extends State<FishDataPage> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _locationController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Fishing Location',
-                prefixIcon: Icon(Icons.location_on),
+                prefixIcon: const Icon(Icons.location_on, color: Colors.deepOrange),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: Colors.deepOrange),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                filled: true,
+                fillColor: Colors.orange.shade50,
               ),
               validator: (value) {
                 if (value == null || value.isEmpty) {
@@ -657,9 +683,18 @@ class _FishDataPageState extends State<FishDataPage> {
                   child: InkWell(
                     onTap: () => _selectDate(context),
                     child: InputDecorator(
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Date',
-                        prefixIcon: Icon(Icons.calendar_today),
+                        prefixIcon: const Icon(Icons.calendar_today, color: Colors.deepOrange),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        focusedBorder: const OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.deepOrange),
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                        ),
+                        filled: true,
+                        fillColor: Colors.orange.shade50,
                       ),
                       child: Text(DateFormat('yyyy-MM-dd').format(_catchDate)),
                     ),
@@ -670,9 +705,18 @@ class _FishDataPageState extends State<FishDataPage> {
                   child: InkWell(
                     onTap: () => _selectTime(context),
                     child: InputDecorator(
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Time',
-                        prefixIcon: Icon(Icons.access_time),
+                        prefixIcon: const Icon(Icons.access_time, color: Colors.deepOrange),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        focusedBorder: const OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.deepOrange),
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                        ),
+                        filled: true,
+                        fillColor: Colors.orange.shade50,
                       ),
                       child: Text(_catchTime.format(context)),
                     ),
@@ -683,17 +727,36 @@ class _FishDataPageState extends State<FishDataPage> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _notesController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Notes (optional)',
-                prefixIcon: Icon(Icons.note),
+                prefixIcon: const Icon(Icons.note, color: Colors.deepOrange),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                focusedBorder: const OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.deepOrange),
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                ),
+                filled: true,
+                fillColor: Colors.orange.shade50,
               ),
               maxLines: 3,
             ),
             const SizedBox(height: 24),
             Center(
               child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepOrange,
+                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
                 onPressed: _submitCatch,
-                child: const Text('Submit Catch'),
+                child: const Text(
+                  'Submit Catch',
+                  style: TextStyle(color: Colors.white),
+                ),
               ),
             ),
           ],
@@ -723,11 +786,15 @@ class FishCatchList extends StatelessWidget {
               final fishCatch = catches[index];
               return Card(
                 margin: const EdgeInsets.all(8.0),
+                color: Colors.orange.shade50,
                 child: ListTile(
-                  leading: const Icon(Icons.pets, size: 40),
+                  leading: const Icon(Icons.pets, size: 40, color: Colors.deepOrange),
                   title: Text(
                     fishCatch.species,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.deepOrange,
+                    ),
                   ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -747,6 +814,7 @@ class FishCatchList extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
+                      color: Colors.deepOrange,
                     ),
                   ),
                 ),
