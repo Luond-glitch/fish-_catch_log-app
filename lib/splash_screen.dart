@@ -68,13 +68,12 @@ class _SplashScreenState extends State<SplashScreen>
                         AlwaysStoppedAnimation<Color>(Colors.blueAccent),
                   ),
                 ),
-
-                // Circular logo
+                  // Circular logo
                 ClipOval(
                   child: Image.asset(
                     "assets/images/logo.png",
-                    width: 140,
-                    height: 140,
+                    width: 80,
+                    height: 80,
                     fit: BoxFit.cover,
                   ),
                 ),
