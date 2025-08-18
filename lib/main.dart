@@ -4,17 +4,7 @@ import 'splash_screen.dart';
 void main() {
   runApp(const FishApp());
 }
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'My App',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: SplashScreen(), // show splash screen first
-    );
-  }
-}
+
 
 class FishApp extends StatelessWidget {
   const FishApp({super.key});
