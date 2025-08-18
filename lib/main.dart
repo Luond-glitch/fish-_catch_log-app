@@ -170,6 +170,7 @@ class _AuthPageState extends State<AuthPage> {
                         obscureText: _obscureBoatNumber,
                         decoration: InputDecoration(
                           labelText: 'Boat Number',
+                          hintText: "e.g RAM678",
                           prefixIcon: const Icon(Icons.directions_boat),
                           suffixIcon: IconButton(
                             icon: Icon(
@@ -203,6 +204,7 @@ class _AuthPageState extends State<AuthPage> {
                           controller: _phoneNumberController,
                           decoration: InputDecoration(
                             labelText: 'Phone Number',
+                            hintText: "e.g 0703...",
                             prefixIcon: const Icon(Icons.phone),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
