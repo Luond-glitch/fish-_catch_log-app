@@ -1,8 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
+import 'splash_screen.dart';
 void main() {
   runApp(const FishApp());
+}
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'My App',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: SplashScreen(), // show splash screen first
+    );
+  }
 }
 
 class FishApp extends StatelessWidget {
@@ -16,7 +27,7 @@ class FishApp extends StatelessWidget {
         primarySwatch: Colors.deepOrange,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: const AuthWrapper(),
+      home: SplashScreen(),
       debugShowCheckedModeBanner: false,
     );
   }
@@ -91,7 +102,7 @@ class _AuthPageState extends State<AuthPage> {
     });
 
     // Simulate network delay
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(seconds: 0));
 
     setState(() {
       _isLoading = false;
@@ -116,7 +127,7 @@ class _AuthPageState extends State<AuthPage> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.blue.shade800, Colors.blue.shade400],
+            colors: [Colors.blue.shade800, Colors.orange],
           ),
         ),
         child: Center(
@@ -433,9 +444,8 @@ class HomePage extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         image: DecorationImage(
-          image: NetworkImage(
-            'https://images.pexels.com/photos/2860705/pexels-photo-2860705.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260',
-          ),
+          image: AssetImage(
+                    "assets/images/background.jpg"),
           fit: BoxFit.cover,
         ),
       ),
