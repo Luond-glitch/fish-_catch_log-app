@@ -28,7 +28,7 @@ android {
 
     signingConfigs {
         create("release") {
-            // ✅ Replace with your keystore details when ready for Play Store
+            
             storeFile = file("../keystore.jks")
             storePassword = "your-store-password"
             keyAlias = "your-key-alias"
@@ -37,11 +37,16 @@ android {
     }
 
     buildTypes {
-        getByName("release") {
-            isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("release")
-        }
+    getByName("release") {
+        isMinifyEnabled = true
+        isShrinkResources = true
+        proguardFiles(
+            getDefaultProguardFile("proguard-android-optimize.txt"),
+            "proguard-rules.pro"
+        )
     }
+}
+
 }
 
 flutter {
