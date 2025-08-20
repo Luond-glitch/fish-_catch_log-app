@@ -7,8 +7,15 @@ plugins {
 
 android {
     namespace = "com.example.catchlog_app"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    compileSdk = 34  // 
+
+    defaultConfig {
+        applicationId = "com.luondglitch.catchlog"  
+        minSdk = 21
+        targetSdk = 34
+        versionCode = 1  
+        versionName = "1.0.0" 
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -16,22 +23,23 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = "11"
     }
 
-    defaultConfig {
-        applicationId "com.luondglitch.catchlog" // unique app id
-    minSdkVersion 21
-    targetSdkVersion 34
-    versionCode flutterVersionCode.toInteger()
-    versionName flutterVersionName
+    signingConfigs {
+        create("release") {
+            // ✅ Replace with your keystore details when ready for Play Store
+            storeFile = file("../keystore.jks")
+            storePassword = "your-store-password"
+            keyAlias = "your-key-alias"
+            keyPassword = "your-key-password"
+        }
     }
 
     buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+        getByName("release") {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
