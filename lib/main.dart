@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'splash_screen.dart';
-void main()  {
-   
-     runApp(const FishApp());
+
+void main() {
+  runApp(const FishApp());
 }
 
 //const FishApp());
@@ -240,7 +240,7 @@ class _AuthPageState extends State<AuthPage> {
                               _isLogin ? 'LOGIN' : 'REGISTER',
                               style: const TextStyle(
                                 fontSize: 16,
-                                color: Colors.white
+                                color: Colors.white,
                               ),
                             ),
                           ),
@@ -258,7 +258,7 @@ class _AuthPageState extends State<AuthPage> {
                               : 'Already have an account? Login',
                           style: TextStyle(
                             color: Colors.blue.shade700,
-                            fontWeight: FontWeight.bold
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
@@ -437,8 +437,7 @@ class HomePage extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         image: DecorationImage(
-          image: AssetImage(
-                    "assets/images/background.jpg"),
+          image: AssetImage("assets/images/background.jpg"),
           fit: BoxFit.cover,
         ),
       ),
@@ -475,7 +474,10 @@ class HomePage extends StatelessWidget {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepOrange,
-                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 30,
+                    vertical: 15,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),
@@ -661,7 +663,10 @@ class _FishDataPageState extends State<FishDataPage> {
               controller: _locationController,
               decoration: InputDecoration(
                 labelText: 'Fishing Location',
-                prefixIcon: const Icon(Icons.location_on, color: Colors.deepOrange),
+                prefixIcon: const Icon(
+                  Icons.location_on,
+                  color: Colors.deepOrange,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -688,7 +693,10 @@ class _FishDataPageState extends State<FishDataPage> {
                     child: InputDecorator(
                       decoration: InputDecoration(
                         labelText: 'Date',
-                        prefixIcon: const Icon(Icons.calendar_today, color: Colors.deepOrange),
+                        prefixIcon: const Icon(
+                          Icons.calendar_today,
+                          color: Colors.deepOrange,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -710,7 +718,10 @@ class _FishDataPageState extends State<FishDataPage> {
                     child: InputDecorator(
                       decoration: InputDecoration(
                         labelText: 'Time',
-                        prefixIcon: const Icon(Icons.access_time, color: Colors.deepOrange),
+                        prefixIcon: const Icon(
+                          Icons.access_time,
+                          color: Colors.deepOrange,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -750,7 +761,10 @@ class _FishDataPageState extends State<FishDataPage> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepOrange,
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 40,
+                    vertical: 15,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),
@@ -791,7 +805,11 @@ class FishCatchList extends StatelessWidget {
                 margin: const EdgeInsets.all(8.0),
                 color: Colors.orange.shade50,
                 child: ListTile(
-                  leading: const Icon(Icons.pets, size: 40, color: Colors.deepOrange),
+                  leading: const Icon(
+                    Icons.pets,
+                    size: 40,
+                    color: Colors.deepOrange,
+                  ),
                   title: Text(
                     fishCatch.species,
                     style: const TextStyle(
