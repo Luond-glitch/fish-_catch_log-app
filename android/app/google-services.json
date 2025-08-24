@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "212499320072",
+    "project_id": "samaki-app-5988d",
+    "storage_bucket": "samaki-app-5988d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:212499320072:android:cecaae60783ef929d1b0bd",
+        "android_client_info": {
+          "package_name": "com.luondglitch.catchlog"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBrW5dkWVVpBePU9-h-1TiXywnkRU1Q3i4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:212499320072:android:17f6e18987176f0dd1b0bd",
+        "android_client_info": {
+          "package_name": "com.luondia.samakiapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBrW5dkWVVpBePU9-h-1TiXywnkRU1Q3i4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

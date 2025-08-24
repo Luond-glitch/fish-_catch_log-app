@@ -52,7 +52,7 @@ class _SplashScreenState extends State<SplashScreen>
     _controller.repeat(reverse: true);
 
     // Navigate after 3 seconds
-    Future.delayed(const Duration(seconds: 3), () {
+    Future.delayed(const Duration(seconds: 4), () {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.pushReplacement(
           context,

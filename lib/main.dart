@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'splash_screen.dart';
-//import 'firebase_options.dart';
+import 'firebase_options.dart';
+import 'services/auth_service.dart';
+import 'services/firestore_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const FishApp());
 }
 
-//const FishApp());
 class FishApp extends StatelessWidget {
   const FishApp({super.key});
 
@@ -19,7 +27,7 @@ class FishApp extends StatelessWidget {
         primarySwatch: Colors.deepOrange,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: SplashScreen(),
+      home: const SplashScreen(),
       debugShowCheckedModeBanner: false,
     );
   }
@@ -33,42 +41,154 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
-  bool _isLoggedIn = false;
-  String _username = '';
-  String _boatNumber = '';
+  final AuthService _authService = AuthService();
+  final FirestoreService _firestoreService = FirestoreService();
+  
+  User? _user;
+  Map<String, dynamic>? _userData;
+  bool _isLoading = true;
 
-  void _login(String username, String boatNumber) {
-    setState(() {
-      _isLoggedIn = true;
-      _username = username;
-      _boatNumber = boatNumber;
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthState();
+  }
+
+  Future<void> _checkAuthState() async {
+    // Check if user is already logged in - using currentUser property instead of getCurrentUser()
+    final currentUser = _authService.currentUser;
+    
+    if (currentUser != null) {
+      await _loadUserData(currentUser.uid);
+    } else {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+
+    // Listen for auth state changes
+    _authService.authStateChanges.listen((User? user) {
+      if (user != null) {
+        _loadUserData(user.uid);
+      } else {
+        setState(() {
+          _user = null;
+          _userData = null;
+          _isLoading = false;
+        });
+      }
     });
   }
 
-  void _logout() {
+  Future<void> _loadUserData(String uid) async {
+    try {
+      final userData = await _authService.getUserData(uid);
+      setState(() {
+        _user = _authService.currentUser; // Using currentUser property
+        _userData = userData;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _login(String username, String boatNumber) async {
     setState(() {
-      _isLoggedIn = false;
-      _username = '';
-      _boatNumber = '';
+      _isLoading = true;
     });
+    
+    final user = await _authService.signInAnonymously(username, boatNumber);
+    if (user != null) {
+      await _loadUserData(user.uid);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Login failed. Please try again.')),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _createAccount(String username, String boatNumber) async {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    // Check if boat number is already registered
+    final isRegistered = await _authService.isBoatNumberRegistered(boatNumber);
+    if (isRegistered) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Boat number is already registered. Please login instead.')),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+    
+    final user = await _authService.signInAnonymously(username, boatNumber);
+    if (user != null) {
+      await _loadUserData(user.uid);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Account creation failed. Please try again.')),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _logout() async {
+    await _authService.signOut();
   }
 
   @override
   Widget build(BuildContext context) {
-    return _isLoggedIn
-        ? MainApp(
-            username: _username,
-            boatNumber: _boatNumber,
-            onLogout: _logout,
-          )
-        : AuthPage(onLogin: _login);
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    
+    if (_user == null || _userData == null) {
+      return AuthPage(
+        onLogin: _login,
+        onCreateAccount: _createAccount,
+      );
+    } else {
+      return MainApp(
+        username: _userData!['username'],
+        boatNumber: _userData!['boatNumber'],
+        userId: _user!.uid,
+        firestoreService: _firestoreService,
+        onLogout: _logout,
+      );
+    }
   }
 }
 
 class AuthPage extends StatefulWidget {
   final Function(String, String) onLogin;
+  final Function(String, String) onCreateAccount;
 
-  const AuthPage({super.key, required this.onLogin});
+  const AuthPage({
+    super.key, 
+    required this.onLogin,
+    required this.onCreateAccount,
+  });
 
   @override
   State<AuthPage> createState() => _AuthPageState();
@@ -78,11 +198,9 @@ class _AuthPageState extends State<AuthPage> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _boatNumberController = TextEditingController();
-  final _phoneNumberController = TextEditingController();
-
-  bool _isLogin = true;
   bool _isLoading = false;
   bool _obscureBoatNumber = true;
+  bool _isLogin = true;
 
   void _submit() async {
     if (!_formKey.currentState!.validate()) {
@@ -93,21 +211,37 @@ class _AuthPageState extends State<AuthPage> {
       _isLoading = true;
     });
 
-    // Simulate network delay
-    await Future.delayed(const Duration(seconds: 0));
+    try {
+      if (_isLogin) {
+        await widget.onLogin(_usernameController.text, _boatNumberController.text);
+      } else {
+        await widget.onCreateAccount(_usernameController.text, _boatNumberController.text);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
+  void _toggleMode() {
     setState(() {
-      _isLoading = false;
+      _isLogin = !_isLogin;
     });
-
-    widget.onLogin(_usernameController.text, _boatNumberController.text);
   }
 
   @override
   void dispose() {
     _usernameController.dispose();
     _boatNumberController.dispose();
-    _phoneNumberController.dispose();
     super.dispose();
   }
 
@@ -140,7 +274,7 @@ class _AuthPageState extends State<AuthPage> {
                       const Icon(Icons.anchor, size: 60, color: Colors.blue),
                       const SizedBox(height: 16),
                       Text(
-                        _isLogin ? 'Welcome Back' : 'Create Account',
+                        _isLogin ? 'Welcome to Samaki Log' : 'Create Account',
                         style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
@@ -200,69 +334,44 @@ class _AuthPageState extends State<AuthPage> {
                           return null;
                         },
                       ),
-                      if (!_isLogin) const SizedBox(height: 16),
-                      if (!_isLogin)
-                        TextFormField(
-                          controller: _phoneNumberController,
-                          decoration: InputDecoration(
-                            labelText: 'Phone Number',
-                            hintText: "e.g 0703...",
-                            prefixIcon: const Icon(Icons.phone),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey.shade50,
-                          ),
-                          keyboardType: TextInputType.phone,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your phone number';
-                            }
-                            return null;
-                          },
-                        ),
                       const SizedBox(height: 24),
                       if (_isLoading)
                         const CircularProgressIndicator()
                       else
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                        Column(
+                          children: [
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  backgroundColor: Colors.deepOrange,
+                                ),
+                                onPressed: _submit,
+                                child: Text(
+                                  _isLogin ? 'LOGIN' : 'CREATE ACCOUNT',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
                               ),
-                              backgroundColor: Colors.deepOrange,
                             ),
-                            onPressed: _submit,
-                            child: Text(
-                              _isLogin ? 'LOGIN' : 'REGISTER',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: Colors.white,
+                            const SizedBox(height: 16),
+                            TextButton(
+                              onPressed: _toggleMode,
+                              child: Text(
+                                _isLogin 
+                                  ? 'Need an account? Create one' 
+                                  : 'Already have an account? Login',
+                                style: const TextStyle(color: Colors.blue),
                               ),
                             ),
-                          ),
+                          ],
                         ),
-                      const SizedBox(height: 16),
-                      TextButton(
-                        onPressed: () {
-                          setState(() {
-                            _isLogin = !_isLogin;
-                          });
-                        },
-                        child: Text(
-                          _isLogin
-                              ? 'Create new account'
-                              : 'Already have an account? Login',
-                          style: TextStyle(
-                            color: Colors.blue.shade700,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -275,15 +384,23 @@ class _AuthPageState extends State<AuthPage> {
   }
 }
 
+// The rest of your code (MainApp, HomePage, FishDataPage, FishCatchList) remains exactly the same
+
+// The rest of your code (MainApp, HomePage, FishDataPage, FishCatchList) remains exactly the same
+
 class MainApp extends StatefulWidget {
   final String username;
   final String boatNumber;
+  final String userId;
+  final FirestoreService firestoreService;
   final VoidCallback onLogout;
 
   const MainApp({
     super.key,
     required this.username,
     required this.boatNumber,
+    required this.userId,
+    required this.firestoreService,
     required this.onLogout,
   });
 
@@ -293,7 +410,6 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   int _currentIndex = 0;
-  final List<FishCatch> _catches = [];
   final List<Widget> _pages = [];
 
   @override
@@ -302,15 +418,14 @@ class _MainAppState extends State<MainApp> {
     _pages.addAll([
       HomePage(username: widget.username, boatNumber: widget.boatNumber),
       FishDataPage(
-        catches: _catches,
+        userId: widget.userId,
         boatNumber: widget.boatNumber,
-        onAddCatch: (newCatch) {
-          setState(() {
-            _catches.add(newCatch);
-          });
-        },
+        firestoreService: widget.firestoreService,
       ),
-      FishCatchList(catches: _catches),
+      FishCatchList(
+        userId: widget.userId,
+        firestoreService: widget.firestoreService,
+      ),
     ]);
   }
 
@@ -354,7 +469,7 @@ class _MainAppState extends State<MainApp> {
                     ),
                   ),
                   Text(
-                    'Boat No.: ${widget.boatNumber}',
+                    'Boat No: ${widget.boatNumber}',
                     style: const TextStyle(fontSize: 14, color: Colors.white70),
                   ),
                 ],
@@ -446,7 +561,7 @@ class HomePage extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.6),
+            color: Colors.transparent,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
@@ -488,9 +603,9 @@ class HomePage extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => FishDataPage(
-                        catches: const [],
+                        userId: '',
                         boatNumber: boatNumber,
-                        onAddCatch: (_) {},
+                        firestoreService: FirestoreService(),
                       ),
                     ),
                   );
@@ -509,15 +624,15 @@ class HomePage extends StatelessWidget {
 }
 
 class FishDataPage extends StatefulWidget {
-  final List<FishCatch> catches;
+  final String userId;
   final String boatNumber;
-  final Function(FishCatch) onAddCatch;
+  final FirestoreService firestoreService;
 
   const FishDataPage({
     super.key,
-    required this.catches,
+    required this.userId,
     required this.boatNumber,
-    required this.onAddCatch,
+    required this.firestoreService,
   });
 
   @override
@@ -532,6 +647,7 @@ class _FishDataPageState extends State<FishDataPage> {
   final _notesController = TextEditingController();
   DateTime _catchDate = DateTime.now();
   TimeOfDay _catchTime = TimeOfDay.now();
+  bool _isSubmitting = false;
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -559,32 +675,64 @@ class _FishDataPageState extends State<FishDataPage> {
     }
   }
 
-  void _submitCatch() {
+  Future<void> _submitCatch() async {
     if (_formKey.currentState!.validate()) {
-      final newCatch = FishCatch(
-        species: _speciesController.text,
-        weight: double.parse(_weightController.text),
-        location: _locationController.text,
-        date: _catchDate,
-        time: _catchTime,
-        notes: _notesController.text,
-        boatNumber: widget.boatNumber,
-      );
-
-      widget.onAddCatch(newCatch);
-
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Catch recorded successfully!')),
-      );
-
-      // Clear the form
-      _formKey.currentState!.reset();
       setState(() {
-        _catchDate = DateTime.now();
-        _catchTime = TimeOfDay.now();
+        _isSubmitting = true;
       });
+
+      try {
+        await widget.firestoreService.addFishCatch(
+          userId: widget.userId,
+          species: _speciesController.text,
+          weight: double.parse(_weightController.text),
+          location: _locationController.text,
+          date: DateTime(
+            _catchDate.year,
+            _catchDate.month,
+            _catchDate.day,
+            _catchTime.hour,
+            _catchTime.minute,
+          ),
+          boatNumber: widget.boatNumber,
+          notes: _notesController.text,
+        );
+
+        _handleSuccess();
+      } catch (e) {
+        _handleError(e);
+      }
     }
+  }
+
+  void _handleSuccess() {
+    // Check if widget is still mounted before updating state
+    if (!mounted) return;
+
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Catch recorded successfully!')),
+    );
+
+    // Clear the form
+    _formKey.currentState!.reset();
+    setState(() {
+      _catchDate = DateTime.now();
+      _catchTime = TimeOfDay.now();
+      _isSubmitting = false;
+    });
+  }
+
+  void _handleError(Object e) {
+    // Check if widget is still mounted before showing error
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Error recording catch: $e')));
+    setState(() {
+      _isSubmitting = false;
+    });
   }
 
   @override
@@ -759,23 +907,25 @@ class _FishDataPageState extends State<FishDataPage> {
             ),
             const SizedBox(height: 24),
             Center(
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepOrange,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 15,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-                onPressed: _submitCatch,
-                child: const Text(
-                  'Submit Catch',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
+              child: _isSubmitting
+                  ? const CircularProgressIndicator()
+                  : ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepOrange,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 40,
+                          vertical: 15,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      onPressed: _submitCatch,
+                      child: const Text(
+                        'Submit Catch',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
             ),
           ],
         ),
@@ -785,83 +935,88 @@ class _FishDataPageState extends State<FishDataPage> {
 }
 
 class FishCatchList extends StatelessWidget {
-  final List<FishCatch> catches;
+  final String userId;
+  final FirestoreService firestoreService;
 
-  const FishCatchList({super.key, required this.catches});
+  const FishCatchList({
+    super.key,
+    required this.userId,
+    required this.firestoreService,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return catches.isEmpty
-        ? const Center(
+    return StreamBuilder<QuerySnapshot>(
+      stream: firestoreService.getUserCatches(userId),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.data == null || snapshot.data!.docs.isEmpty) {
+          return const Center(
             child: Text(
               'No catches recorded yet',
               style: TextStyle(fontSize: 18),
             ),
-          )
-        : ListView.builder(
-            itemCount: catches.length,
-            itemBuilder: (context, index) {
-              final fishCatch = catches[index];
-              return Card(
-                margin: const EdgeInsets.all(8.0),
-                color: Colors.orange.shade50,
-                child: ListTile(
-                  leading: const Icon(
-                    Icons.pets,
-                    size: 40,
+          );
+        }
+
+        return ListView.builder(
+          itemCount: snapshot.data!.docs.length,
+          itemBuilder: (context, index) {
+            final doc = snapshot.data!.docs[index];
+            final fishCatch = doc.data() as Map<String, dynamic>;
+
+            return Card(
+              margin: const EdgeInsets.all(8.0),
+              color: Colors.orange.shade50,
+              child: ListTile(
+                leading: const Icon(
+                  Icons.pets,
+                  size: 40,
+                  color: Colors.deepOrange,
+                ),
+                title: Text(
+                  fishCatch['species'],
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
                     color: Colors.deepOrange,
-                  ),
-                  title: Text(
-                    fishCatch.species,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.deepOrange,
-                    ),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Weight: ${fishCatch.weight} kg'),
-                      Text('Location: ${fishCatch.location}'),
-                      Text(
-                        'Date: ${DateFormat('yyyy-MM-dd').format(fishCatch.date)} at ${fishCatch.time.format(context)}',
-                      ),
-                      if (fishCatch.notes.isNotEmpty)
-                        Text('Notes: ${fishCatch.notes}'),
-                      Text('Boat No.: ${fishCatch.boatNumber}'),
-                    ],
-                  ),
-                  trailing: Text(
-                    '${index + 1}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.deepOrange,
-                    ),
+                    fontSize: 16,
                   ),
                 ),
-              );
-            },
-          );
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 4),
+                    Text('Weight: ${fishCatch['weight']} kg'),
+                    Text('Location: ${fishCatch['location']}'),
+                    Text(
+                      'Date: ${DateFormat('yyyy-MM-dd').format(fishCatch['date'].toDate())}',
+                    ),
+                    if (fishCatch['notes'] != null &&
+                        fishCatch['notes'].isNotEmpty)
+                      Text('Notes: ${fishCatch['notes']}'),
+                    Text('Boat No.: ${fishCatch['boatNumber']}'),
+                  ],
+                ),
+                trailing: Text(
+                  '${index + 1}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepOrange,
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
-}
-
-class FishCatch {
-  final String species;
-  final double weight;
-  final String location;
-  final DateTime date;
-  final TimeOfDay time;
-  final String notes;
-  final String boatNumber;
-
-  FishCatch({
-    required this.species,
-    required this.weight,
-    required this.location,
-    required this.date,
-    required this.time,
-    required this.notes,
-    required this.boatNumber,
-  });
 }
