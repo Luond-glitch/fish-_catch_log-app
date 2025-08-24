@@ -12,7 +12,7 @@ dependencies:
     sdk: flutter
   intl: ^0.20.2
   cupertino_icons: ^1.0.8
-  #cached_network_image: ^3.3.1
+  cached_network_image: ^3.3.1
   flutter_launcher_icons: ^0.14.4
   firebase_core: ^4.0.0
   firebase_auth: ^6.0.1
