@@ -10,9 +10,7 @@ import 'services/firestore_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const FishApp());
 }
 
@@ -43,7 +41,7 @@ class AuthWrapper extends StatefulWidget {
 class _AuthWrapperState extends State<AuthWrapper> {
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
-  
+
   User? _user;
   Map<String, dynamic>? _userData;
   bool _isLoading = true;
@@ -57,7 +55,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Future<void> _checkAuthState() async {
     // Check if user is already logged in - using currentUser property instead of getCurrentUser()
     final currentUser = _authService.currentUser;
-    
+
     if (currentUser != null) {
       await _loadUserData(currentUser.uid);
     } else {
@@ -99,8 +97,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
     setState(() {
       _isLoading = true;
     });
-    
-    final user = await _authService.signInAnonymously(username, boatNumber);
+
+    final user = await _authService.signInWithUsername(username, boatNumber);
     if (user != null) {
       await _loadUserData(user.uid);
     } else {
@@ -115,17 +113,27 @@ class _AuthWrapperState extends State<AuthWrapper> {
     }
   }
 
-  Future<void> _createAccount(String username, String boatNumber) async {
+  Future<void> _createAccount(
+    String username,
+    String phoneNumber,
+    String boatNumber,
+  ) async {
     setState(() {
       _isLoading = true;
     });
-    
+
     // Check if boat number is already registered
-    final isRegistered = await _authService.isBoatNumberRegistered(boatNumber);
-    if (isRegistered) {
+    final isBoatRegistered = await _authService.isBoatNumberRegistered(
+      boatNumber,
+    );
+    if (isBoatRegistered) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Boat number is already registered. Please login instead.')),
+          const SnackBar(
+            content: Text(
+              'Boat number is already registered. Please login instead.',
+            ),
+          ),
         );
         setState(() {
           _isLoading = false;
@@ -133,14 +141,40 @@ class _AuthWrapperState extends State<AuthWrapper> {
       }
       return;
     }
-    
-    final user = await _authService.signInAnonymously(username, boatNumber);
+
+    // Check if username is already registered
+    final isUsernameRegistered = await _authService.isUsernameRegistered(
+      username,
+    );
+    if (isUsernameRegistered) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Username is already taken. Please choose another one.',
+            ),
+          ),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
+    final user = await _authService.createAccount(
+      username,
+      phoneNumber,
+      boatNumber,
+    );
     if (user != null) {
       await _loadUserData(user.uid);
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account creation failed. Please try again.')),
+          const SnackBar(
+            content: Text('Account creation failed. Please try again.'),
+          ),
         );
         setState(() {
           _isLoading = false;
@@ -156,18 +190,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    
+
     if (_user == null || _userData == null) {
-      return AuthPage(
-        onLogin: _login,
-        onCreateAccount: _createAccount,
-      );
+      return AuthPage(onLogin: _login, onCreateAccount: _createAccount);
     } else {
       return MainApp(
         username: _userData!['username'],
@@ -182,10 +209,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
 class AuthPage extends StatefulWidget {
   final Function(String, String) onLogin;
-  final Function(String, String) onCreateAccount;
+  final Function(String, String, String) onCreateAccount;
 
   const AuthPage({
-    super.key, 
+    super.key,
     required this.onLogin,
     required this.onCreateAccount,
   });
@@ -197,6 +224,7 @@ class AuthPage extends StatefulWidget {
 class _AuthPageState extends State<AuthPage> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
+  final _phoneNumberController = TextEditingController();
   final _boatNumberController = TextEditingController();
   bool _isLoading = false;
   bool _obscureBoatNumber = true;
@@ -213,15 +241,22 @@ class _AuthPageState extends State<AuthPage> {
 
     try {
       if (_isLogin) {
-        await widget.onLogin(_usernameController.text, _boatNumberController.text);
+        await widget.onLogin(
+          _usernameController.text,
+          _boatNumberController.text,
+        );
       } else {
-        await widget.onCreateAccount(_usernameController.text, _boatNumberController.text);
+        await widget.onCreateAccount(
+          _usernameController.text,
+          _phoneNumberController.text,
+          _boatNumberController.text,
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
       }
     } finally {
       if (mounted) {
@@ -235,12 +270,17 @@ class _AuthPageState extends State<AuthPage> {
   void _toggleMode() {
     setState(() {
       _isLogin = !_isLogin;
+      // Clear form when switching modes
+      if (_isLogin) {
+        _phoneNumberController.clear();
+      }
     });
   }
 
   @override
   void dispose() {
     _usernameController.dispose();
+    _phoneNumberController.dispose();
     _boatNumberController.dispose();
     super.dispose();
   }
@@ -282,6 +322,8 @@ class _AuthPageState extends State<AuthPage> {
                         ),
                       ),
                       const SizedBox(height: 24),
+
+                      // Username field (used for both login and signup)
                       TextFormField(
                         controller: _usernameController,
                         decoration: InputDecoration(
@@ -295,12 +337,39 @@ class _AuthPageState extends State<AuthPage> {
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Please enter a username';
+                            return 'Please enter your username';
+                          }
+                          if (value.length < 3) {
+                            return 'Username must be at least 3 characters';
                           }
                           return null;
                         },
                       ),
                       const SizedBox(height: 16),
+
+                      // Phone number field for account creation only
+                      if (!_isLogin) ...[
+                        TextFormField(
+                          controller: _phoneNumberController,
+                          decoration: InputDecoration(
+                            labelText: 'Phone Number (Optional)',
+                            prefixIcon: const Icon(Icons.phone),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                          ),
+                          keyboardType: TextInputType.phone,
+                          validator: (value) {
+                            // Phone number is optional, so no validation needed
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // Boat Number field (used as password)
                       TextFormField(
                         controller: _boatNumberController,
                         obscureText: _obscureBoatNumber,
@@ -331,6 +400,9 @@ class _AuthPageState extends State<AuthPage> {
                           if (value == null || value.isEmpty) {
                             return 'Please enter your boat number';
                           }
+                          if (value.length < 4) {
+                            return 'Boat number must be at least 4 characters';
+                          }
                           return null;
                         },
                       ),
@@ -344,7 +416,9 @@ class _AuthPageState extends State<AuthPage> {
                               width: double.infinity,
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
@@ -364,9 +438,9 @@ class _AuthPageState extends State<AuthPage> {
                             TextButton(
                               onPressed: _toggleMode,
                               child: Text(
-                                _isLogin 
-                                  ? 'Need an account? Create one' 
-                                  : 'Already have an account? Login',
+                                _isLogin
+                                    ? 'Need an account? Create one'
+                                    : 'Already have an account? Login',
                                 style: const TextStyle(color: Colors.blue),
                               ),
                             ),
@@ -383,10 +457,6 @@ class _AuthPageState extends State<AuthPage> {
     );
   }
 }
-
-// The rest of your code (MainApp, HomePage, FishDataPage, FishCatchList) remains exactly the same
-
-// The rest of your code (MainApp, HomePage, FishDataPage, FishCatchList) remains exactly the same
 
 class MainApp extends StatefulWidget {
   final String username;

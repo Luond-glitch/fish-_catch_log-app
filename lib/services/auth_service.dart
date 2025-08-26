@@ -11,19 +11,37 @@ class AuthService {
   // Auth state changes
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // Sign in anonymously and store user data
-  Future<User?> signInAnonymously(String username, String boatNumber) async {
-    try {
-      // Sign in anonymously
-      UserCredential result = await _auth.signInAnonymously();
-      User user = result.user!;
+  // Helper: generate pseudo email
+  String _makeEmail(String username, String boatNumber) {
+    return "${username}_${boatNumber}@samaki.com".toLowerCase();
+  }
 
-      // Store user data in Firestore
-      await _firestore.collection('users').doc(user.uid).set({
-        'username': username,
-        'boatNumber': boatNumber,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+  // Create account
+  Future<User?> createAccount(
+    String username,
+    String phoneNumber,
+    String boatNumber,
+  ) async {
+    try {
+      final email = _makeEmail(username, boatNumber);
+      final password = boatNumber; // can be replaced with stronger pwd later
+
+      UserCredential result = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      User? user = result.user;
+
+      if (user != null) {
+        await _firestore.collection('users').doc(user.uid).set({
+          'username': username,
+          'phoneNumber': phoneNumber,
+          'boatNumber': boatNumber,
+          'createdAt': FieldValue.serverTimestamp(),
+          'userId': user.uid,
+        });
+      }
 
       return user;
     } catch (e) {
@@ -31,28 +49,48 @@ class AuthService {
     }
   }
 
-  // Check if boat number is already registered
-  Future<bool> isBoatNumberRegistered(String boatNumber) async {
+  // Sign in with username + boat number
+  Future<User?> signInWithUsername(String username, String boatNumber) async {
     try {
-      final querySnapshot = await _firestore
-          .collection('users')
-          .where('boatNumber', isEqualTo: boatNumber)
-          .get();
+      final email = _makeEmail(username, boatNumber);
+      final password = boatNumber;
 
-      return querySnapshot.docs.isNotEmpty;
+      UserCredential result = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      return result.user;
     } catch (e) {
-      return false;
+      return null;
     }
   }
 
-  // Get user data
+  // Check if boat number exists
+  Future<bool> isBoatNumberRegistered(String boatNumber) async {
+    final querySnapshot = await _firestore
+        .collection('users')
+        .where('boatNumber', isEqualTo: boatNumber)
+        .limit(1)
+        .get();
+    return querySnapshot.docs.isNotEmpty;
+  }
+
+  // Check if username exists
+  Future<bool> isUsernameRegistered(String username) async {
+    final querySnapshot = await _firestore
+        .collection('users')
+        .where('username', isEqualTo: username)
+        .limit(1)
+        .get();
+    return querySnapshot.docs.isNotEmpty;
+  }
+
+  // Get user data by uid
   Future<Map<String, dynamic>?> getUserData(String uid) async {
     try {
-      DocumentSnapshot doc = await _firestore
-          .collection('users')
-          .doc(uid)
-          .get();
-      return doc.data() as Map<String, dynamic>?;
+      final doc = await _firestore.collection('users').doc(uid).get();
+      return doc.exists ? doc.data() : null;
     } catch (e) {
       return null;
     }
