@@ -24,7 +24,7 @@ class AuthService {
   ) async {
     try {
       final email = _makeEmail(username, boatNumber);
-      final password = boatNumber; // can be replaced with stronger pwd later
+      final password = boatNumber; 
 
       UserCredential result = await _auth.createUserWithEmailAndPassword(
         email: email,
