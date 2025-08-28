@@ -8,9 +8,12 @@ import 'splash_screen.dart';
 import 'firebase_options.dart';
 import 'services/auth_service.dart';
 import 'services/firestore_service.dart';
+import 'screens/settings_screen.dart';
+import '../notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+   await NotificationService().initialize();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const FishApp());
 }
@@ -21,7 +24,7 @@ class FishApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Catchlog App',
+      title: 'SamakiLog App',
       theme: ThemeData(
         primarySwatch: Colors.deepOrange,
         visualDensity: VisualDensity.adaptivePlatformDensity,
@@ -200,6 +203,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
       return MainApp(
         username: _userData!['username'],
         boatNumber: _userData!['boatNumber'],
+        phoneNumber: _userData!['phoneNumber'] ?? '', 
         userId: _user!.uid,
         firestoreService: _firestoreService,
         onLogout: _logout,
@@ -463,6 +467,7 @@ class MainApp extends StatefulWidget {
   final String username;
   final String boatNumber;
   final String userId;
+  final String phoneNumber; 
   final FirestoreService firestoreService;
   final VoidCallback onLogout;
 
@@ -472,6 +477,7 @@ class MainApp extends StatefulWidget {
     required this.boatNumber,
     required this.userId,
     required this.firestoreService,
+    required this.phoneNumber,
     required this.onLogout,
   });
 
@@ -593,6 +599,14 @@ class _MainAppState extends State<MainApp> {
               title: const Text('Settings'),
               onTap: () {
                 Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SettingsScreen(
+                    username: widget.username,
+          boatNumber: widget.boatNumber,
+          phoneNumber: widget.phoneNumber,
+                  )),
+                );
               },
             ),
             ListTile(
