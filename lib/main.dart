@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'screens/statistics_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -496,6 +497,7 @@ class _MainAppState extends State<MainApp> {
         userId: widget.userId,
         firestoreService: widget.firestoreService,
       ),
+      StatisticsScreen(userId: widget.userId),
     ]);
   }
 
@@ -519,8 +521,8 @@ class _MainAppState extends State<MainApp> {
           padding: EdgeInsets.zero,
           children: [
             DrawerHeader(
-              decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 233, 89, 6),
+              decoration:const BoxDecoration(
+                color:  Color.fromARGB(255, 233, 89, 6),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -575,6 +577,16 @@ class _MainAppState extends State<MainApp> {
                 Navigator.pop(context);
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.bar_chart),
+              title: const Text('Statistics'),
+              onTap: () {
+                setState(() {
+                  _currentIndex = 3;
+                });
+                Navigator.pop(context);
+              },
+            ),
             const Divider(),
             ListTile(
               leading: const Icon(Icons.settings),
@@ -606,6 +618,7 @@ class _MainAppState extends State<MainApp> {
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Add Catch'),
           BottomNavigationBarItem(icon: Icon(Icons.list), label: 'My Catches'),
+          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Statistics'),
         ],
       ),
     );

@@ -25,10 +25,10 @@ class BlurredBackgroundApp extends StatelessWidget {
           ),
 
           // Centered text
-          Center(
-            child: Text(
+         const Center(
+            child:  Text(
               "Fishing Guide App 🎣",
-              style: const TextStyle(
+              style:  TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
