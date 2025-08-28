@@ -90,7 +90,7 @@ class _SplashScreenState extends State<SplashScreen>
                   alignment: Alignment.center,
                   children: [
                     // Circular blue animated border
-                    SizedBox(
+                   const SizedBox(
                       width: 180,
                       height: 180,
                       child: CircularProgressIndicator(
