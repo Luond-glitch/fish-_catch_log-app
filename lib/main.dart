@@ -521,8 +521,8 @@ class _MainAppState extends State<MainApp> {
           padding: EdgeInsets.zero,
           children: [
             DrawerHeader(
-              decoration:const BoxDecoration(
-                color:  Color.fromARGB(255, 233, 89, 6),
+              decoration: const BoxDecoration(
+                color: Color.fromARGB(255, 233, 89, 6),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -614,11 +614,19 @@ class _MainAppState extends State<MainApp> {
             _currentIndex = index;
           });
         },
+        backgroundColor: Colors.white,
+        selectedItemColor: Colors.deepOrange,
+        unselectedItemColor: Colors.deepPurpleAccent,
+        showUnselectedLabels: true,
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Add Catch'),
           BottomNavigationBarItem(icon: Icon(Icons.list), label: 'My Catches'),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Statistics'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart),
+            label: 'Statistics',
+          ),
         ],
       ),
     );
