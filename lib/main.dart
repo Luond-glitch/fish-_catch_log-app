@@ -13,7 +13,7 @@ import '../notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-   await NotificationService().initialize();
+  await NotificationService().initialize();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const FishApp());
 }
@@ -57,7 +57,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   Future<void> _checkAuthState() async {
-    // Check if user is already logged in - using currentUser property instead of getCurrentUser()
+    // Check if user is already logged in
     final currentUser = _authService.currentUser;
 
     if (currentUser != null) {
@@ -84,9 +84,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   Future<void> _loadUserData(String uid) async {
     try {
-      final userData = await _authService.getUserData(uid);
+      final userData = await _authService.getUserDataByUid(uid);
       setState(() {
-        _user = _authService.currentUser; // Using currentUser property
+        _user = _authService.currentUser;
         _userData = userData;
         _isLoading = false;
       });
@@ -102,13 +102,24 @@ class _AuthWrapperState extends State<AuthWrapper> {
       _isLoading = true;
     });
 
-    final user = await _authService.signInWithUsername(username, boatNumber);
-    if (user != null) {
-      await _loadUserData(user.uid);
-    } else {
+    try {
+      final user = await _authService.signInWithUsername(username, boatNumber);
+      if (user != null) {
+        await _loadUserData(user.uid);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Login failed. Please try again.')),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login failed. Please try again.')),
+          SnackBar(content: Text('Login error: ${e.toString()}')),
         );
         setState(() {
           _isLoading = false;
@@ -126,59 +137,30 @@ class _AuthWrapperState extends State<AuthWrapper> {
       _isLoading = true;
     });
 
-    // Check if boat number is already registered
-    final isBoatRegistered = await _authService.isBoatNumberRegistered(
-      boatNumber,
-    );
-    if (isBoatRegistered) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Boat number is already registered. Please login instead.',
+    try {
+      final user = await _authService.createAccount(
+        username,
+        phoneNumber,
+        boatNumber,
+      );
+      if (user != null) {
+        await _loadUserData(user.uid);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Account creation failed. Please try again.'),
             ),
-          ),
-        );
-        setState(() {
-          _isLoading = false;
-        });
+          );
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
-      return;
-    }
-
-    // Check if username is already registered
-    final isUsernameRegistered = await _authService.isUsernameRegistered(
-      username,
-    );
-    if (isUsernameRegistered) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Username is already taken. Please choose another one.',
-            ),
-          ),
-        );
-        setState(() {
-          _isLoading = false;
-        });
-      }
-      return;
-    }
-
-    final user = await _authService.createAccount(
-      username,
-      phoneNumber,
-      boatNumber,
-    );
-    if (user != null) {
-      await _loadUserData(user.uid);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account creation failed. Please try again.'),
-          ),
+          SnackBar(content: Text('Account creation error: ${e.toString()}')),
         );
         setState(() {
           _isLoading = false;
@@ -194,7 +176,18 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Loading...'),
+            ],
+          ),
+        ),
+      );
     }
 
     if (_user == null || _userData == null) {
@@ -203,7 +196,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
       return MainApp(
         username: _userData!['username'],
         boatNumber: _userData!['boatNumber'],
-        phoneNumber: _userData!['phoneNumber'] ?? '', 
+        phoneNumber: _userData!['phoneNumber'] ?? '',
         userId: _user!.uid,
         firestoreService: _firestoreService,
         onLogout: _logout,
@@ -259,9 +252,9 @@ class _AuthPageState extends State<AuthPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
       }
     } finally {
       if (mounted) {
@@ -413,7 +406,13 @@ class _AuthPageState extends State<AuthPage> {
                       ),
                       const SizedBox(height: 24),
                       if (_isLoading)
-                        const CircularProgressIndicator()
+                        const Column(
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 16),
+                            Text('Processing...'),
+                          ],
+                        )
                       else
                         Column(
                           children: [
@@ -441,7 +440,7 @@ class _AuthPageState extends State<AuthPage> {
                             ),
                             const SizedBox(height: 16),
                             TextButton(
-                              onPressed: _toggleMode,
+                              onPressed: _isLoading ? null : _toggleMode,
                               child: Text(
                                 _isLogin
                                     ? 'Need an account? Create one'
