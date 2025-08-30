@@ -87,15 +87,13 @@ class NotificationService {
           priority: Priority.high,
           playSound: true,
           enableVibration: true,
-          // Remove or replace with actual sound resource if needed
-          // sound: RawResourceAndroidNotificationSound('notification_sound'),
           icon: '@mipmap/ic_launcher',
           colorized: true,
         ),
       ),
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
+      
     );
   }
 

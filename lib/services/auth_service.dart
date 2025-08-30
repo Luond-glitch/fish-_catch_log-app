@@ -13,7 +13,7 @@ class AuthService {
 
   // Helper: generate pseudo email
   String _makeEmail(String username, String boatNumber) {
-    return "${username}_${boatNumber}@samaki.com".toLowerCase();
+    return "$username.$boatNumber@samaki.com".toLowerCase();
   }
 
   // ✅ Create account with boat number uniqueness guarantee
@@ -32,7 +32,7 @@ class AuthService {
           .where('username', isEqualTo: username)
           .limit(1)
           .get();
-          
+
       if (usernameQuery.docs.isNotEmpty) {
         throw FirebaseAuthException(
           code: 'username-already-exists',
@@ -41,7 +41,10 @@ class AuthService {
       }
 
       // Step 2: Check if boat number already exists
-      final boatNumberDoc = await _firestore.collection('users').doc(boatNumber).get();
+      final boatNumberDoc = await _firestore
+          .collection('users')
+          .doc(boatNumber)
+          .get();
       if (boatNumberDoc.exists) {
         final data = boatNumberDoc.data();
         // Check if the account is still active
@@ -75,7 +78,7 @@ class AuthService {
         } catch (e) {
           // If Firestore write fails, delete the auth account
           await user.delete();
-          print("⚠️ Failed to save user profile: $e");
+
           throw FirebaseAuthException(
             code: 'firestore-write-failed',
             message: 'Account creation failed. Please try again.',
@@ -84,11 +87,9 @@ class AuthService {
       }
 
       return user;
-    } on FirebaseAuthException catch (e) {
-      print("❌ Firebase Auth Error in createAccount: ${e.code} - ${e.message}");
+    } on FirebaseAuthException {
       rethrow;
     } catch (e) {
-      print("❌ Error in createAccount: $e");
       throw FirebaseAuthException(
         code: 'unknown-error',
         message: 'An unexpected error occurred. Please try again.',
@@ -109,8 +110,6 @@ class AuthService {
 
       return result.user;
     } on FirebaseAuthException catch (e) {
-      print("❌ Firebase Auth Error in signInWithUsername: ${e.code} - ${e.message}");
-      
       // Provide more user-friendly error messages
       if (e.code == 'user-not-found' || e.code == 'wrong-password') {
         throw FirebaseAuthException(
@@ -118,10 +117,9 @@ class AuthService {
           message: 'Invalid username or boat number',
         );
       }
-      
+
       rethrow;
     } catch (e) {
-      print("❌ Error in signInWithUsername: $e");
       throw FirebaseAuthException(
         code: 'unknown-error',
         message: 'An unexpected error occurred. Please try again.',
@@ -139,7 +137,6 @@ class AuthService {
       }
       return false;
     } catch (e) {
-      print("❌ Error checking boat number: $e");
       return false;
     }
   }
@@ -153,35 +150,45 @@ class AuthService {
           .limit(1)
           .get();
       return querySnapshot.docs.isNotEmpty;
+
+
     } catch (e) {
-      print("❌ Error checking username: $e");
+      
       return false;
     }
   }
+
 
   // ✅ Get user data by boatNumber
   Future<Map<String, dynamic>?> getUserData(String boatNumber) async {
     try {
       final doc = await _firestore.collection('users').doc(boatNumber).get();
       return doc.exists ? doc.data() : null;
+
+
     } catch (e) {
-      print("❌ Error getting user data: $e");
+     
       return null;
     }
   }
 
   // ✅ Get user data by UID
   Future<Map<String, dynamic>?> getUserDataByUid(String uid) async {
+
+
     try {
       final querySnapshot = await _firestore
           .collection('users')
           .where('userId', isEqualTo: uid)
           .limit(1)
           .get();
-      
-      return querySnapshot.docs.isNotEmpty ? querySnapshot.docs.first.data() : null;
+
+
+      return querySnapshot.docs.isNotEmpty
+          ? querySnapshot.docs.first.data()
+          : null;
     } catch (e) {
-      print("❌ Error getting user data by UID: $e");
+     
       return null;
     }
   }

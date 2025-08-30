@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../notification_service.dart';
 import '/models/time.dart';
+import '/screens/weekly_reports_screen.dart'; // Import the new weekly reports screen
 
 class SettingsScreen extends StatefulWidget {
   final String username;
@@ -179,6 +180,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // NEW METHOD: Navigate to weekly reports screen
+  void _navigateToWeeklyReports() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WeeklyReportsScreen(
+          username: widget.username,
+          boatNumber: widget.boatNumber,
+        ),
+      ),
+    );
+  }
+
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
@@ -207,7 +221,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       trailing: Switch(
         value: value, 
         onChanged: onChanged,
-        activeColor: Colors.deepOrange,
+        activeThumbColor: Colors.deepOrange,
       ),
       onTap: () => onChanged(!value),
     );
@@ -243,12 +257,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
             value: _catchRemindersEnabled,
             onChanged: _toggleCatchReminders,
           ),
-          _buildSwitchTile(
-            icon: Icons.analytics,
-            title: 'Weekly Reports',
-            subtitle: 'Weekly fishing performance reports',
-            value: _weeklyReportsEnabled,
-            onChanged: _toggleWeeklyReports,
+          // UPDATED: Weekly Reports now navigates to a screen
+          ListTile(
+            leading: const Icon(Icons.analytics, color: Colors.deepOrange),
+            title: const Text('Weekly Reports'),
+            subtitle: const Text('View and download your weekly reports'),
+            trailing: Switch(
+              value: _weeklyReportsEnabled,
+              onChanged: _toggleWeeklyReports,
+              activeThumbColor: Colors.deepOrange,
+            ),
+            onTap: () {
+              // Navigate to weekly reports screen when tapped
+              _navigateToWeeklyReports();
+            },
           ),
           _buildSectionHeader('Data & Storage'),
           _buildSwitchTile(

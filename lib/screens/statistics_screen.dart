@@ -17,6 +17,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   final StatisticsService _statsService = StatisticsService();
   List<DailyStatistics> _dailyStats = [];
   bool _isLoading = true;
+  String _errorMessage = '';
 
   @override
   void initState() {
@@ -30,11 +31,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       setState(() {
         _dailyStats = stats;
         _isLoading = false;
+        _errorMessage = '';
       });
     } catch (e) {
-      print('Error loading statistics: $e');
       setState(() {
         _isLoading = false;
+        _errorMessage = 'Failed to load statistics: $e';
       });
     }
   }
@@ -50,25 +52,13 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     });
   }
 
-  /// Generate bottom labels (dates)
-  Widget _bottomTitleWidgets(double value, TitleMeta meta) {
-    final style = const TextStyle(fontSize: 10);
-
-    if (value.toInt() < 0 || value.toInt() >= _dailyStats.length) {
-      return const SizedBox.shrink();
-    }
-
-    final date = _dailyStats[value.toInt()].date;
-    return SideTitleWidget(
-      axisSide: meta.axisSide,
-      child: Text(DateFormat('MM/dd').format(date), style: style),
-    );
-  }
-
-  /// Generate left labels (weights)
-  Widget _leftTitleWidgets(double value, TitleMeta meta) {
-    return Text('${value.toInt()}kg',
-        style: const TextStyle(fontSize: 10), textAlign: TextAlign.left);
+  /// Calculate appropriate Y-axis maximum
+  double _calculateMaxY() {
+    if (_dailyStats.isEmpty) return 10;
+    final maxWeight = _dailyStats
+        .map((stat) => stat.totalWeight)
+        .reduce((a, b) => a > b ? a : b);
+    return (maxWeight * 1.2).toDouble(); // Add 20% padding
   }
 
   @override
@@ -77,114 +67,175 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       appBar: AppBar(
         title: const Text('Fishing Statistics'),
         backgroundColor: Colors.deepOrange,
+        centerTitle: true,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _dailyStats.isEmpty
-              ? const Center(
-                  child: Text(
-                    'No catch data available yet.',
-                    style: TextStyle(fontSize: 18),
+          : _errorMessage.isNotEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _errorMessage,
+                    style: const TextStyle(fontSize: 16, color: Colors.red),
+                    textAlign: TextAlign.center,
                   ),
-                )
-              : Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Daily Catch Weight (kg)',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _loadStatistics,
+                    child: const Text('Try Again'),
+                  ),
+                ],
+              ),
+            )
+          : _dailyStats.isEmpty
+          ? const Center(
+              child: Text(
+                'No catch data available yet.',
+                style: TextStyle(fontSize: 18),
+              ),
+            )
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Daily Catch Weight (kg)',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
 
-                      /// Line Chart with fl_chart
-                      Expanded(
-                        child: LineChart(
-                          LineChartData(
-                            gridData: FlGridData(show: true),
-                            titlesData: FlTitlesData(
-                              bottomTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  reservedSize: 32,
-                                  getTitlesWidget: _bottomTitleWidgets,
-                                ),
-                              ),
-                              leftTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  getTitlesWidget: _leftTitleWidgets,
-                                  reservedSize: 40,
-                                ),
-                              ),
-                              topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                              rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  /// Chart with x-axis and y-axis labels
+                  Expanded(
+                    child: LineChart(
+                      LineChartData(
+                        gridData: const FlGridData(show: true),
+                        titlesData: FlTitlesData(
+                          show: true,
+                          // Hide top titles
+                          topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          // Show y-axis labels with "kg" suffix
+                          leftTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 40,
+                              getTitlesWidget: (value, meta) {
+                                // Only show labels at major intervals
+                                if (value == meta.min ||
+                                    value == meta.max ||
+                                    value % 5 == 0) {
+                                  return Text(
+                                    '${value.toInt()} kg',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.black,
+                                    ),
+                                  );
+                                }
+                                return const Text('');
+                              },
                             ),
-                            borderData: FlBorderData(
-                              show: true,
-                              border: Border.all(color: Colors.grey),
+                          ),
+                          // Show x-axis labels
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 22,
+                              getTitlesWidget: (value, meta) {
+                                // Only show labels for integer values
+                                if (value == meta.min ||
+                                    value == meta.max ||
+                                    value % 1 == 0) {
+                                  final index = value.toInt();
+                                  if (index >= 0 &&
+                                      index < _dailyStats.length) {
+                                    return Text(
+                                      DateFormat(
+                                        'MMM dd',
+                                      ).format(_dailyStats[index].date),
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.black,
+                                      ),
+                                    );
+                                  }
+                                }
+                                return const Text('');
+                              },
                             ),
-                            lineBarsData: [
-                              LineChartBarData(
-                                spots: _createSpots(),
-                                isCurved: true,
-                                color: Colors.deepOrange,
-                                barWidth: 3,
-                                belowBarData: BarAreaData(
-                                  show: true,
-                                  color: Colors.deepOrange,
-                                ),
-                                dotData: FlDotData(show: true),
-                              ),
-                            ],
                           ),
                         ),
+                        borderData: FlBorderData(show: true),
+                        minX: 0,
+                        maxX: _dailyStats.length > 1
+                            ? (_dailyStats.length - 1).toDouble()
+                            : 1,
+                        minY: 0,
+                        maxY: _calculateMaxY(),
+                        lineBarsData: [
+                          LineChartBarData(
+                            spots: _createSpots(),
+                            isCurved: true,
+                            color: Colors.deepOrange,
+                            barWidth: 3,
+                            belowBarData: BarAreaData(
+                              show: true,
+                              color: Colors.deepOrange,
+                            ),
+                            dotData: const FlDotData(show: true),
+                          ),
+                        ],
                       ),
-
-                      const SizedBox(height: 20),
-                      const Text(
-                        'Daily Summary',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-
-                      /// Daily summary list
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: _dailyStats.length,
-                          itemBuilder: (context, index) {
-                            final stat = _dailyStats[index];
-                            return Card(
-                              margin: const EdgeInsets.symmetric(vertical: 4),
-                              child: ListTile(
-                                leading: const Icon(Icons.calendar_today,
-                                    color: Colors.deepOrange),
-                                title: Text(
-                                    DateFormat('MMM dd, yyyy').format(stat.date)),
-                                trailing: Text(
-                                  '${stat.totalWeight} kg',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: Colors.deepOrange,
-                                  ),
-                                ),
-                                subtitle: Text('${stat.catchCount} catches'),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Daily Summary',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+
+                  /// Daily summary list
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: _dailyStats.length,
+                      itemBuilder: (context, index) {
+                        final stat = _dailyStats[index];
+                        return Card(
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          child: ListTile(
+                            leading: const Icon(
+                              Icons.calendar_today,
+                              color: Colors.deepOrange,
+                            ),
+                            title: Text(
+                              DateFormat('MMM dd, yyyy').format(stat.date),
+                            ),
+                            trailing: Text(
+                              '${stat.totalWeight.toStringAsFixed(1)} kg',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.deepOrange,
+                              ),
+                            ),
+                            subtitle: Text('${stat.catchCount} catches'),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }
