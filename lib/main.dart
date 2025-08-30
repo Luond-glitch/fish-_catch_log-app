@@ -14,7 +14,11 @@ import '../notification_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService().initialize();
+  
+  // Corrected: Changed 'firebase' to 'Firebase'
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  
+ 
   runApp(const FishApp());
 }
 
@@ -83,19 +87,29 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   Future<void> _loadUserData(String uid) async {
-    try {
-      final userData = await _authService.getUserDataByUid(uid);
+  try {
+    final userData = await _authService.getUserDataByUid(uid);
+    setState(() {
+      _user = _authService.currentUser;
+      _userData = userData;
+      _isLoading = false;
+    });
+  } catch (e) {
+    print("⚠️ Error loading user data: $e");
+    setState(() {
+      _isLoading = false;
+    });
+    
+    // Even if Firestore fails, allow login if auth succeeded
+    if (_authService.currentUser != null) {
       setState(() {
         _user = _authService.currentUser;
-        _userData = userData;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
+        _userData = {}; // Empty data, but user can still use app
         _isLoading = false;
       });
     }
   }
+}
 
   Future<void> _login(String username, String boatNumber) async {
     setState(() {

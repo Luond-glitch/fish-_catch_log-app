@@ -16,7 +16,7 @@ class AuthService {
     return "${username}_${boatNumber}@samaki.com".toLowerCase();
   }
 
-  // ✅ Create account (boatNumber as Firestore doc ID for uniqueness)
+  // ✅ Create account with boat number uniqueness guarantee
   Future<User?> createAccount(
     String username,
     String phoneNumber,
@@ -26,11 +26,7 @@ class AuthService {
       final email = _makeEmail(username, boatNumber);
       final password = boatNumber;
 
-      print("🔍 Starting account creation for: $username, boat: $boatNumber");
-      print("🔍 Generated email: $email");
-
-      // Step 1: Check for username uniqueness first
-      print("🔍 Checking username uniqueness...");
+      // Step 1: Check if username already exists
       final usernameQuery = await _firestore
           .collection('users')
           .where('username', isEqualTo: username)
@@ -38,37 +34,35 @@ class AuthService {
           .get();
           
       if (usernameQuery.docs.isNotEmpty) {
-        print("❌ Username already exists: $username");
         throw FirebaseAuthException(
           code: 'username-already-exists',
           message: 'This username is already taken',
         );
       }
 
-      // Step 2: Check for boat number uniqueness
-      print("🔍 Checking boat number uniqueness...");
+      // Step 2: Check if boat number already exists
       final boatNumberDoc = await _firestore.collection('users').doc(boatNumber).get();
       if (boatNumberDoc.exists) {
-        print("❌ Boat number already exists: $boatNumber");
-        throw FirebaseAuthException(
-          code: 'boat-number-already-exists',
-          message: 'This boat number is already registered by another user',
-        );
+        final data = boatNumberDoc.data();
+        // Check if the account is still active
+        if (data != null && data['isActive'] != false) {
+          throw FirebaseAuthException(
+            code: 'boat-number-already-exists',
+            message: 'This boat number is already registered by another user',
+          );
+        }
       }
 
       // Step 3: Create Firebase Auth account
-      print("🔍 Creating Firebase Auth account...");
       UserCredential result = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
       User? user = result.user;
-      print("✅ Firebase Auth account created successfully: ${user?.uid}");
 
       if (user != null) {
         // Step 4: Create user document in Firestore
-        print("🔍 Creating Firestore user document...");
         try {
           await _firestore.collection('users').doc(boatNumber).set({
             'username': username,
@@ -76,47 +70,29 @@ class AuthService {
             'boatNumber': boatNumber,
             'createdAt': FieldValue.serverTimestamp(),
             'userId': user.uid,
+            'isActive': true,
           });
-          print("✅ Firestore user document created successfully");
         } catch (e) {
           // If Firestore write fails, delete the auth account
-          print("❌ Firestore write failed: $e");
           await user.delete();
-          print("🗑️ Deleted auth account due to Firestore failure");
+          print("⚠️ Failed to save user profile: $e");
           throw FirebaseAuthException(
             code: 'firestore-write-failed',
-            message: 'Failed to create user profile. Please try again.',
+            message: 'Account creation failed. Please try again.',
           );
         }
       }
 
-      // ✅ Return user after successful creation
-      print("✅ Account creation completed successfully");
       return user;
     } on FirebaseAuthException catch (e) {
       print("❌ Firebase Auth Error in createAccount: ${e.code} - ${e.message}");
       rethrow;
-    } catch (e, stackTrace) {
-      print("❌ Unexpected Error in createAccount: $e");
-      print("❌ Stack trace: $stackTrace");
-      
-      // Provide more specific error messages based on the exception type
-      if (e is FirebaseException) {
-        throw FirebaseAuthException(
-          code: e.code,
-          message: 'Firebase error: ${e.message}',
-        );
-      } else if (e.toString().contains('network')) {
-        throw FirebaseAuthException(
-          code: 'network-error',
-          message: 'Network error. Please check your internet connection.',
-        );
-      } else {
-        throw FirebaseAuthException(
-          code: 'unknown-error',
-          message: 'An unexpected error occurred. Please try again.',
-        );
-      }
+    } catch (e) {
+      print("❌ Error in createAccount: $e");
+      throw FirebaseAuthException(
+        code: 'unknown-error',
+        message: 'An unexpected error occurred. Please try again.',
+      );
     }
   }
 
@@ -144,29 +120,24 @@ class AuthService {
       }
       
       rethrow;
-    } catch (e, stackTrace) {
+    } catch (e) {
       print("❌ Error in signInWithUsername: $e");
-      print("❌ Stack trace: $stackTrace");
-      
-      if (e.toString().contains('network')) {
-        throw FirebaseAuthException(
-          code: 'network-error',
-          message: 'Network error. Please check your internet connection.',
-        );
-      } else {
-        throw FirebaseAuthException(
-          code: 'unknown-error',
-          message: 'An unexpected error occurred. Please try again.',
-        );
-      }
+      throw FirebaseAuthException(
+        code: 'unknown-error',
+        message: 'An unexpected error occurred. Please try again.',
+      );
     }
   }
 
-  // ✅ Check if boat number exists (direct doc lookup now)
+  // ✅ Check if boat number exists
   Future<bool> isBoatNumberRegistered(String boatNumber) async {
     try {
       final doc = await _firestore.collection('users').doc(boatNumber).get();
-      return doc.exists;
+      if (doc.exists) {
+        final data = doc.data();
+        return data != null && data['isActive'] != false;
+      }
+      return false;
     } catch (e) {
       print("❌ Error checking boat number: $e");
       return false;
@@ -188,13 +159,13 @@ class AuthService {
     }
   }
 
-  // ✅ Get user data by boatNumber (since it's now the doc ID)
+  // ✅ Get user data by boatNumber
   Future<Map<String, dynamic>?> getUserData(String boatNumber) async {
     try {
       final doc = await _firestore.collection('users').doc(boatNumber).get();
       return doc.exists ? doc.data() : null;
     } catch (e) {
-      print("❌ Error getting user data by boat number: $e");
+      print("❌ Error getting user data: $e");
       return null;
     }
   }
@@ -202,19 +173,15 @@ class AuthService {
   // ✅ Get user data by UID
   Future<Map<String, dynamic>?> getUserDataByUid(String uid) async {
     try {
-      // Query the users collection to find the document with the matching userId
       final querySnapshot = await _firestore
           .collection('users')
           .where('userId', isEqualTo: uid)
           .limit(1)
           .get();
       
-      if (querySnapshot.docs.isNotEmpty) {
-        return querySnapshot.docs.first.data();
-      }
-      return null;
+      return querySnapshot.docs.isNotEmpty ? querySnapshot.docs.first.data() : null;
     } catch (e) {
-      print("❌ Error in getUserDataByUid: $e");
+      print("❌ Error getting user data by UID: $e");
       return null;
     }
   }

@@ -27,8 +27,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   bool _autoBackupEnabled = false;
   bool _locationServicesEnabled = true;
-  String _weightUnit = 'kg';
-  String _temperatureUnit = 'Celsius';
   bool _catchRemindersEnabled = false;
   bool _weeklyReportsEnabled = false;
 
@@ -55,8 +53,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _notificationsEnabled = prefs.getBool('notifications') ?? true;
         _autoBackupEnabled = prefs.getBool('autoBackup') ?? false;
         _locationServicesEnabled = prefs.getBool('locationServices') ?? true;
-        _weightUnit = prefs.getString('weightUnit') ?? 'kg';
-        _temperatureUnit = prefs.getString('temperatureUnit') ?? 'Celsius';
         _catchRemindersEnabled = prefs.getBool('catchReminders') ?? false;
         _weeklyReportsEnabled = prefs.getBool('weeklyReports') ?? false;
       });
@@ -98,6 +94,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _saveSetting('catchReminders', false);
       _saveSetting('weeklyReports', false);
     }
+
+    // Show visual feedback
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(value ? 'Notifications enabled' : 'Notifications disabled'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    }
   }
 
   Future<void> _toggleCatchReminders(bool value) async {
@@ -120,7 +126,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         id: 1,
         title: 'Catch Reminder 🎣',
         body: 'Don\'t forget to log your catches today!',
-        time:const Time(hour: 8, minute: 0),
+        time: const Time(hour: 8, minute: 0),
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -198,7 +204,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       leading: Icon(icon),
       title: Text(title),
       subtitle: subtitle != null ? Text(subtitle) : null,
-      trailing: Switch(value: value, onChanged: onChanged),
+      trailing: Switch(
+        value: value, 
+        onChanged: onChanged,
+        activeColor: Colors.deepOrange,
+      ),
       onTap: () => onChanged(!value),
     );
   }
@@ -206,12 +216,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(
+        title: const Text('Settings'),
+        backgroundColor: Colors.deepOrange,
+      ),
       body: ListView(
         children: [
           _buildSectionHeader('Profile'),
           ListTile(
-            leading: const Icon(Icons.person),
+            leading: const Icon(Icons.person, color: Colors.deepOrange),
             title: const Text('Edit Profile'),
             subtitle: Text('Username: ${widget.username}'),
             onTap: _showEditProfileDialog,
@@ -223,14 +236,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
             value: _notificationsEnabled,
             onChanged: _toggleNotifications,
           ),
-          ListTile(
-            leading: const Icon(Icons.notification_add),
-            title: const Text('Notification Settings'),
-            subtitle: Text(
-              'Reminders: ${_catchRemindersEnabled ? 'On' : 'Off'}, '
-              'Reports: ${_weeklyReportsEnabled ? 'On' : 'Off'}',
-            ),
-            onTap: _showNotificationSettings,
+          _buildSwitchTile(
+            icon: Icons.remember_me,
+            title: 'Catch Reminders',
+            subtitle: 'Daily reminders to log your catches',
+            value: _catchRemindersEnabled,
+            onChanged: _toggleCatchReminders,
+          ),
+          _buildSwitchTile(
+            icon: Icons.analytics,
+            title: 'Weekly Reports',
+            subtitle: 'Weekly fishing performance reports',
+            value: _weeklyReportsEnabled,
+            onChanged: _toggleWeeklyReports,
           ),
           _buildSectionHeader('Data & Storage'),
           _buildSwitchTile(
@@ -241,19 +259,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onChanged: (value) {
               setState(() => _autoBackupEnabled = value);
               _saveSetting('autoBackup', value);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(value ? 'Auto backup enabled' : 'Auto backup disabled'),
+                  duration: const Duration(seconds: 1),
+                ),
+              );
             },
-          ),
-          ListTile(
-            leading: const Icon(Icons.cloud_download),
-            title: const Text('Data & Backup Settings'),
-            onTap: _showBackupSettings,
-          ),
-          _buildSectionHeader('Units & Measurements'),
-          ListTile(
-            leading: const Icon(Icons.scale),
-            title: const Text('Measurement Units'),
-            subtitle: Text('Weight: $_weightUnit, Temp: $_temperatureUnit'),
-            onTap: _showUnitsSettings,
           ),
           _buildSectionHeader('Location'),
           _buildSwitchTile(
@@ -264,37 +276,74 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onChanged: (value) {
               setState(() => _locationServicesEnabled = value);
               _saveSetting('locationServices', value);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(value ? 'Location services enabled' : 'Location services disabled'),
+                  duration: const Duration(seconds: 1),
+                ),
+              );
             },
           ),
           _buildSectionHeader('Help & Support'),
           ListTile(
-            leading: const Icon(Icons.help),
+            leading: const Icon(Icons.help, color: Colors.deepOrange),
             title: const Text('Help & Support'),
-            onTap: _showHelpSupport,
-          ),
-          ListTile(
-            leading: const Icon(Icons.info),
-            title: const Text('About App'),
-            onTap: _showAboutApp,
-          ),
-          ListTile(
-            leading: const Icon(Icons.star),
-            title: const Text('Rate App'),
             onTap: () {
+              _showHelpSupport();
+              // Visual feedback
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Redirecting to app store...')),
+                const SnackBar(
+                  content: Text('Opening help section'),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.info, color: Colors.deepOrange),
+            title: const Text('About App'),
+            onTap: () {
+              _showAboutApp();
+              // Visual feedback
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Showing app information'),
+                  duration: Duration(seconds: 1),
+                ),
               );
             },
           ),
           _buildSectionHeader('App Information'),
-          const ListTile(title: Text('Version'), subtitle: Text('1.0.0')),
-          ListTile(
-            title: const Text('Privacy Policy'),
-            onTap: () {},
+          const ListTile(
+            leading: Icon(Icons.apps, color: Colors.grey),
+            title: Text('Version'),
+            subtitle: Text('1.0.0'),
           ),
           ListTile(
+            leading: const Icon(Icons.privacy_tip, color: Colors.deepOrange),
+            title: const Text('Privacy Policy'),
+            onTap: () {
+              // Visual feedback
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Opening privacy policy'),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.description, color: Colors.deepOrange),
             title: const Text('Terms of Service'),
-            onTap: () {},
+            onTap: () {
+              // Visual feedback
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Opening terms of service'),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -314,10 +363,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 controller: _usernameController,
                 decoration: const InputDecoration(labelText: 'Username'),
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: _boatNumberController,
                 decoration: const InputDecoration(labelText: 'Boat Number'),
               ),
+              const SizedBox(height: 16),
               TextField(
                 controller: _phoneNumberController,
                 decoration: const InputDecoration(labelText: 'Phone Number'),
@@ -334,118 +385,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // Save profile changes logic here
                 Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Profile updated')),
+                  const SnackBar(content: Text('Profile updated successfully')),
                 );
               },
               child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showNotificationSettings() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Notification Settings'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildSwitchTile(
-                    icon: Icons.remember_me,
-                    title: 'Catch Reminders',
-                    value: _catchRemindersEnabled,
-                    onChanged: _toggleCatchReminders,
-                  ),
-                  _buildSwitchTile(
-                    icon: Icons.analytics,
-                    title: 'Weekly Reports',
-                    value: _weeklyReportsEnabled,
-                    onChanged: _toggleWeeklyReports,
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Close'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showBackupSettings() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Backup Settings'),
-          content: const Text('Configure your backup preferences here.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showUnitsSettings() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Units Settings'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: const Text('Weight Unit'),
-                trailing: DropdownButton<String>(
-                  value: _weightUnit,
-                  items: const [
-                    DropdownMenuItem(value: 'kg', child: Text('kg')),
-                    DropdownMenuItem(value: 'lbs', child: Text('lbs')),
-                  ],
-                  onChanged: (value) {
-                    setState(() => _weightUnit = value!);
-                    _saveSetting('weightUnit', value);
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ),
-              ListTile(
-                title: const Text('Temperature Unit'),
-                trailing: DropdownButton<String>(
-                  value: _temperatureUnit,
-                  items: const [
-                    DropdownMenuItem(value: 'Celsius', child: Text('Celsius')),
-                    DropdownMenuItem(value: 'Fahrenheit', child: Text('Fahrenheit')),
-                  ],
-                  onChanged: (value) {
-                    setState(() => _temperatureUnit = value!);
-                    _saveSetting('temperatureUnit', value);
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
             ),
           ],
         );
@@ -459,7 +402,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Help & Support'),
-          content: const Text('Contact support at support@fishingapp.com'),
+          content: const Text('Contact support at support@samakilog.com\n\nWe\'re here to help you with any questions or issues.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -476,8 +419,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('About App'),
-          content: const Text('Fishing Log App v1.0.0\n\nTrack your fishing catches and statistics.'),
+          title: const Text('About SamakiLog'),
+          content: const Text('SamakiLog App v1.0.0\n\nTrack your fishing catches and statistics. Built for fishermen by fishermen.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -487,5 +430,5 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       },
     );
-  }
+  } 
 }
